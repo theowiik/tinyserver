@@ -1,7 +1,20 @@
 import random
-from flask import Flask, jsonify
+from flask import Flask, jsonify, abort
 
 app = Flask(__name__)
+
+cats = [
+    {
+        'id': 1,
+        'name': u'Sir Cat',
+        'description': u'Some text'
+    },
+    {
+        'id': 2,
+        'title': u'Mr Cat',
+        'description': u'Some more text'
+    }
+]
 
 
 @app.route('/')
@@ -13,6 +26,26 @@ def index():
 def respond():
     response = {"greeting": random.choice(["Hello!", "Greetings!"])}
     return jsonify(response)
+
+
+@app.route('/api/cats', methods=['GET'])
+def get_cats():
+    return jsonify({"cats": cats})
+
+
+@app.route('/api/cats/<int:cat_id>', methods=['GET'])
+def get_cat(cat_id):
+    cat = None
+
+    for c in cats:
+        if c['id'] == cat_id:
+            cat = c
+            break
+
+    if not cat:
+        abort(404)
+
+    return jsonify({'cat': cat})
 
 
 if __name__ == '__main__':
