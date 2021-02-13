@@ -16,17 +16,21 @@ db = SQLAlchemy(app)
 
 class Human(db.Model, SerializerMixin):
     __tablename__ = 'humans'
+    serialize_rules = ('-cats.human',)
+
     name = db.Column(db.String(30), primary_key=True)
-    cats = db.relationship('Cat', back_populates='owner')
+    cats = db.relationship('Cat', back_populates='human')
 
 
 class Cat(db.Model, SerializerMixin):
     __tablename__ = 'cats'
+    serialize_rules = ('-human',)
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(30))
     coolness = db.Column(db.Float)
-    owner_name = db.Column(db.String, db.ForeignKey('humans.name'))
-    owner = db.relationship("Human", back_populates="cats")
+    human_name = db.Column(db.String, db.ForeignKey('humans.name'))
+    human = db.relationship("Human", back_populates="cats")
 
 
 # -------------------------------- ROUTES
@@ -61,6 +65,15 @@ def create_human():
     return jsonify({"human": human.to_dict()})
 
 
+@app.route('/api/humans/<string:human_name>', methods=['GET'])
+def get_human(human_name):
+    human = Human.query.filter_by(name=human_name).first()
+    print(human)
+    if not human:
+        abort(404)
+    return jsonify({'human': human.to_dict()})
+
+
 # ------- CATS
 
 @app.route('/api/cats', methods=['POST'])
@@ -69,7 +82,7 @@ def create_cat():
     name = json['name']
     coolness = json['coolness']
 
-    if not (name or coolness):
+    if not name or not coolness:
         abort(400)
 
     cat = Cat(name=name, coolness=coolness)
@@ -90,6 +103,20 @@ def get_cat(cat_id):
     cat = Cat.query.filter_by(id=cat_id).first()
     if not cat:
         abort(404)
+    return jsonify({'cat': cat.to_dict()})
+
+
+@app.route('/api/cats/<int:cat_id>/set_human/<string:human_name>', methods=['PATCH'])
+def set_human(cat_id, human_name):
+    cat = Cat.query.filter_by(id=cat_id).first()
+    human = Human.query.filter_by(name=human_name).first()
+
+    if not cat or not human:
+        abort(404)
+
+    cat.human = human
+    db.session.commit()
+
     return jsonify({'cat': cat.to_dict()})
 
 
